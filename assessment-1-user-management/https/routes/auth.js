@@ -1,3 +1,4 @@
+const env = require('../../config/env');
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -26,8 +27,7 @@ let users = [
   }
 ];
 
-const JWT_SECRET = 'your-secret-key-here'; // BUG: Hardcoded secret
-
+const JWT_SECRET = env.JWT_SECRET
 // Login endpoint
 router.post('/login', async (req, res) => {
   try {

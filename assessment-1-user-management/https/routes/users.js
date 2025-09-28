@@ -1,3 +1,4 @@
+const env = require('../../config/env');
 const express = require('express');
 const jwt = require('jsonwebtoken');
 
@@ -22,8 +23,7 @@ let users = [
     createdAt: new Date('2024-01-02').toISOString()
   }
 ];
-
-const JWT_SECRET = 'your-secret-key-here'; // BUG: Same hardcoded secret
+const JWT_SECRET = env.JWT_SECRET
 
 // MISSING FEATURE: Authentication verification
 function verifyToken(authHeader) {

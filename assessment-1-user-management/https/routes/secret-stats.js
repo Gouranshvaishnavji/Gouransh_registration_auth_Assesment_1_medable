@@ -1,12 +1,12 @@
 // SECRET ENDPOINT - Part of the assessment puzzle
 // This endpoint should be discovered by reading the hints
-
+const env = require('../../config/env');
 const express = require('express');
 const jwt = require('jsonwebtoken');
 
 const router = express.Router();
 
-const JWT_SECRET = 'your-secret-key-here';
+const JWT_SECRET = env.JWT_SECRET;
 
 // Encoded secret message (Base64)
 const SECRET_MESSAGE = 'Q29uZ3JhdHVsYXRpb25zISBZb3UgZm91bmQgdGhlIHNlY3JldCBlbmRwb2ludC4gVGhlIGZpbmFsIGNsdWUgaXM6IFNIQ19IZWFkZXJfUHV6emxlXzIwMjQ=';
