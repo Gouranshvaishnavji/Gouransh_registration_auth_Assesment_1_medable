@@ -1,78 +1,120 @@
-# Project Decision & Progress Log
+# Development Journal & Thought Process
 
-This document outlines the key problems identified in the initial boilerplate code and the corresponding solutions and architectural decisions made during development.
-
----
-
-## 1. Handling Sensitive Information
-* **Problem:** The boilerplate code had hardcoded secrets like the JWT secret, posing a significant security risk.
-* **Solution:** I created an `env.js` file to centralize and load all environment variables using `process.env`. This ensures no secrets are committed to version control. While `process.env` could be used directly, the `env.js` module provides a cleaner, more organized approach.
+This document is my personal log of how I worked through the project. I’ve tried to capture the actual problems I ran into, what I was thinking at the time, and how I solved them.
 
 ---
 
-## 2. Centralizing Error Handling
-* **Problem:** Each controller was cluttered with individual `try/catch` blocks, leading to repetitive and messy code.
-* **Solution:** I implemented a **global error handler middleware** and a custom `AppError` class. Now, controllers are much cleaner—they simply `throw new AppError(...)` and the middleware handles the logic of formatting and sending the final error response.
-* _**Note:** It was crucial to place the error handling middleware at the very end of the middleware chain in `server.js`, after all the routes have been defined._
+## Environment Setup
+
+At the start, I noticed the JWT secret and other sensitive values were written directly in the code.
+
+> My first thought was: what if I need to change the key later or move the app to another machine? I’d have to change it in multiple places. That’s messy and insecure.
+
+So I moved everything into a `.env` file and created an `env.js` wrapper to centralize access. This way I only use `env.JWT_SECRET` instead of sprinkling `process.env` calls everywhere. It's a cleaner and safer approach.
 
 ---
 
-## 3. Clarifying `AppError` vs. `errorHandler`
-* **Problem:** I was initially confused about the distinct roles of the `AppError` class and the `errorHandler` middleware.
-* **Solution:** I clarified that the `AppError` class is a blueprint for **creating** custom, operational errors with attached status codes. The `errorHandler` is the **middleware** responsible for **catching** these specific errors and processing them into a consistent JSON response for the client.
+## Error Handling
+
+Early on, I saw too many `try/catch` blocks inside the routes. It felt repetitive and hard to maintain.
+
+> My thought process was: there has to be a single place where I can deal with errors instead of cluttering every controller.
+
+That led me to create a **global errorHandler middleware** and a custom `AppError` class. With this, I can just call `next(new AppError("message", 400))` and not worry about sending the response. The middleware takes care of formatting the error consistently.
 
 ---
 
-## 4. Centralizing the Data Model
-* **Problem:** The initial code had the `users` array duplicated across multiple files, violating the "single source of truth" principle.
-* **Solution:** I created a single `models/users.js` file to act as a centralized, in-memory database. All controllers now import user data from this one location. I also preloaded it with one admin and one regular user for testing purposes.
+## Authentication and Authorization
+
+The boilerplate code had a weird flow where it issued JWT tokens even on registration.
+
+> Normally, I would only issue a token on login. I debated whether to change it but decided to stick closer to best practices: register only creates the account, login generates the token.
+
+I also found that every new user was being assigned the `"user"` role, hardcoded. That felt wrong because it meant there was no real role validation. I adjusted it so `"user"` is the default role, but added checks so only an admin can promote someone else.
 
 ---
 
-## 5. Secure Role Assignment
-* **Problem:** The boilerplate hardcoded the user role. Allowing users to assign their own role during registration would be a major security flaw.
-* **Solution:** My implementation ensures that the registration endpoint **always** assigns the role of `"user"` by default. The `admin` role is reserved for predefined accounts in the data model, preventing privilege escalation.
+## Input Validation
+
+There was no validation at all.
+
+> I imagined a scenario where someone could register with an email like "123" or a password like "pass". That would break everything later.
+
+I brought in **Joi** to enforce rules: valid email, password with length and complexity requirements, and max limits to avoid injection attempts. This immediately made the API more trustworthy.
 
 ---
 
-## 6. Implementing Input Validation
-* **Problem:** The API lacked any validation for incoming data like emails or passwords.
-* **Solution:** I integrated the **Joi** library to create robust validation schemas with the following rules:
-    * **Password:** Minimum 8 characters, requiring at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character.
-    * **Email:** Must be a valid email format.
-    * **Name:** Optional, between 2 and 50 characters.
-* _**Note:** I also created a reusable `validate.js` middleware to ensure validation logic runs cleanly before the main controller logic is executed._
+## User Data Management
+
+The `users` array was duplicated in multiple files.
+
+> That made me think: what happens if I add a user in one file and not the other? It would cause desynchronization.
+
+I created a single `userModel.js` to hold the in-memory data. That became the central source of truth. From then on, all controllers imported from that file.
+
+Another thing was passwords showing up in API responses.
+
+> I pictured calling `/api/users` and seeing everyone’s hashed password. That’s a big no.
+
+So I filtered out the `password` field in every response.
 
 ---
 
-## 7. Preventing Password Exposure
-* **Problem:** API responses were leaking sensitive user data by including the hashed password.
-* **Solution:** Before sending any user object in a response, I strip out the password using object destructuring:
-    ```javascript
-    const { password: _, ...safeUser } = newUser;
-    res.json(safeUser);
-    ```
+## Middleware Choices
+
+Originally, the routes used URL parameters like `/api/users/:id` to update or delete a user.
+
+> I realized this could be abused: if I log in as user A but know user B’s ID, I could hit `/api/users/B` and modify their account.
+
+To prevent this, I switched to using `res.locals.user` populated by the auth middleware. Now the server trusts the token and knows which user is making the request, without relying on IDs in the URL. This change made the routes much safer.
+
+I also added some new middlewares:
+* **`authMiddleware`**: Verifies JWTs and puts the user in `res.locals`.
+* **`requireRole`**: Enforces role-based access (admin-only routes).
+* **`requestIdMiddleware`**: Tags every request with a unique ID so I can trace it in the logs.
 
 ---
 
-## 8. API Documentation with Swagger
-* **Problem:** The project required comprehensive API documentation.
-* **Solution:** I added **Swagger** using `swagger-ui-express` and `swagger-jsdoc`. I created a central Swagger configuration file and hooked the interactive UI into the `/api/docs` endpoint. I have begun annotating routes with JSDoc comments to auto-generate the documentation.
+## Logging with Winston
+
+During testing, I noticed that using `console.log` was not enough.
+
+> Once multiple requests came in, I couldn’t tell which log belonged to which request. I also thought about what would happen in production: console logs disappear, no history is saved.
+
+That’s why I added **Winston**. I set up two files: `combined.log` for all logs and `error.log` for errors. I also integrated request IDs so every log entry can be traced back to a specific request. Now if something fails, I know exactly what happened and when.
 
 ---
 
-## 9. JWT/Cookie Strategy for Registration vs. Login
-* **Problem:** I was unsure whether a JWT cookie should be set immediately upon registration or only after a successful login.
-* **Solution:** I determined the correct and more secure flow is to **only set the cookie upon login**. Registration's purpose is to create an account; Login's purpose is to verify identity and establish a session.
+## Secret Puzzle Endpoint
+
+The `/api/users/secret-stats` endpoint was completely open. Anyone could hit it and see the secret message.
+
+> That didn’t fit the idea of a hidden puzzle.
+
+I fixed it by requiring both the puzzle condition (special header or query param) and an authenticated admin role. Now, just guessing the header is not enough—you have to actually log in as an admin. That felt more in line with the challenge.
 
 ---
 
-## ✅ Tasks Completed So Far
-- [x] Moved all sensitive information to a secure `.env` configuration.
-- [x] Set up a custom `AppError` class and a global error handling middleware.
-- [x] Centralized the user data into a single model file.
-- [x] Implemented a secure default role assignment for new users.
-- [x] Fixed the password leak in all relevant API responses.
-- [x] Added strong, schema-based input validation using Joi.
-- [x] Integrated a Swagger documentation endpoint at `/api/docs`.
-- [x] Designed and completed the secure user registration flow.
+## Swagger Documentation
+
+Since part of the assessment asked for documentation, I started adding Swagger-style comments.
+
+> The key thought was: the docs should tell future developers exactly what each route expects and returns without diving into the code. That way the project feels complete and professional.
+
+I picked **OpenAPI** because it’s easier to maintain by annotating the code directly.
+
+---
+
+## Current Progress
+
+So far I’ve managed to:
+
+- [x] Move sensitive values into `.env` and modularize with `env.js`.
+- [x] Centralize user data into one model.
+- [x] Implement proper JWT authentication and authorization.
+- [x] Add input validation with **Joi**.
+- [x] Create global error handling with a custom error class.
+- [x] Switch from URL params to `res.locals.user` for security.
+- [x] Add **Winston** logging with request IDs.
+- [x] Secure the secret puzzle endpoint.
+- [x] Start adding **Swagger** docs.
