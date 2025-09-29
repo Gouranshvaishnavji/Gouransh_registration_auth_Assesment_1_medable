@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+import { swaggerUi, swaggerSpec } from "./config/swagger.js";
+
 
 // Import routes
 const authRoutes = require('./https/routes/auth');

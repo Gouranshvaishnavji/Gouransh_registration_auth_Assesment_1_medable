@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "description": "User Management API Assessment - Fix bugs and implement missing features",
   "main": "server.js",
+  "type": "module",
+
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
@@ -13,13 +15,20 @@
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
     "uuid": "^9.0.1",
     "validator": "^13.11.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
   },
-  "keywords": ["assessment", "api", "node.js", "user-management"],
+  "keywords": [
+    "assessment",
+    "api",
+    "node.js",
+    "user-management"
+  ],
   "author": "Assessment Creator",
   "license": "MIT"
 }

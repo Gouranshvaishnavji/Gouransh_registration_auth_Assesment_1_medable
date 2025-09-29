@@ -52,7 +52,6 @@ router.get('/', async (req, res) => {
       users: users.map(user => ({
         id: user.id,
         email: user.email,
-        password: user.password, // BUG: Exposing passwords
         name: user.name,
         role: user.role,
         createdAt: user.createdAt
@@ -78,7 +77,6 @@ router.get('/:userId', async (req, res) => {
     res.json({
       id: user.id,
       email: user.email,
-      password: user.password, // BUG: Password should not be returned
       name: user.name,
       role: user.role,
       createdAt: user.createdAt
