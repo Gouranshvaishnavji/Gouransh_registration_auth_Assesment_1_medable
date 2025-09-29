@@ -1,3 +1,4 @@
+const env = require('../config/env');
 function errorHandler(err, req, res, next) {
   console.error(err); // replace with logger later
 
@@ -7,7 +8,7 @@ function errorHandler(err, req, res, next) {
   res.status(statusCode).json({
     success: false,
     message,
-    ...(process.env.NODE_ENV === "development" && { stack: err.stack })
+    ...(env.NODE_ENV === "development" && { stack: err.stack })
   });
 }
 

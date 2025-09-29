@@ -2,21 +2,21 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 import { swaggerUi, swaggerSpec } from "./config/swagger.js";
-
+const env = require('./config/env');
 
 // Import routes
-const authRoutes = require('./https/routes/auth');
+const authRoutes = require('./https/routes/authRoutes.js');
 const userRoutes = require('./https/routes/users');
 const secretStatsRoutes = require('./https/routes/secret-stats');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = env.PORT ;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-
+app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // Custom headers for puzzle hints
 app.use((req, res, next) => {
   res.set({
