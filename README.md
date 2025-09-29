@@ -42,11 +42,9 @@ Code snippet
 NODE_ENV=development
 PORT=8888
 
-# JWT
 JWT_SECRET=supersecretkey
 JWT_EXPIRES_IN=1h
 
-# Logging
 LOG_LEVEL=info
 LOG_DIR=logs
 4. Run the server
@@ -107,3 +105,7 @@ Passwords are hashed with bcrypt.
 Cookies are HTTP-only.
 
 The .env file is committed since no sensitive secrets are in use.
+
+```
+### deployed link 
+https://gouransh-registration-auth-assesment-1.onrender.com/
